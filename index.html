@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Game Server Finder</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#0b0b0f;color:#fff;overflow-x:hidden;}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.shape{position:absolute;opacity:.18;}
+.circle{border-radius:50%}
+.square{border-radius:14px}
+.triangle{width:0;height:0;border-style:solid}
+header{padding:20px;text-align:center;font-size:28px;font-weight:bold;position:relative;z-index:2;}
+.container{max-width:1100px;margin:auto;padding:20px;position:relative;z-index:2;min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
+.grid{display: flex;flex-wrap: wrap;justify-content: center;gap: 20px;}
+.card{background:#14141c;border-radius:16px;padding:16px;text-align:center;width:200px;transition: transform .2s, box-shadow .2s;margin-bottom:20px;position:relative;}
+.card:hover{transform: scale(1.05);box-shadow: 0 10px 20px rgba(0,0,0,0.5);}
+.card img{width:100%;height:auto;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px;background:#2a2a38;}
+button{width:100%;padding:12px;border:none;border-radius:10px;background:#4f7cff;color:#fff;cursor:pointer;transition: background .2s;}
+button:hover{background:#0353e9}
+.back{margin-bottom:15px;background:#444}
+.delete-btn{background:#e63946;margin-top:6px;}
+.delete-btn:hover{background:#a4161a;}
+.add-btn{position:fixed;top:20px;right:20px;width:50px;height:50px;border-radius:50%;background:#ff4f8b;color:#fff;border:none;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center;font-size:32px;line-height:1;}
+input,select,textarea{width:100%;padding:10px;margin-bottom:10px;border-radius:8px;border:none;}
+.hidden{display:none}
+.mode-box{background:#1b1b26;padding:10px;border-radius:10px;margin-bottom:10px;}
+#addModeList label{display:grid;grid-template-columns:18px 1fr;gap:8px;margin:6px 0;}
+.preview{width:100%;height:180px;border-radius:12px;background:#2a2a38;display:flex;align-items:center;justify-content:center;margin-bottom:10px;overflow:hidden;}
+.preview img{width:100%;height:100%;object-fit:cover;}
+.page{opacity:1;transition: opacity .4s;}
+.page.hidden{opacity:0;pointer-events:none;position:absolute;top:0;left:0;right:0;}
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<button class="add-btn" onclick="openAdd()">＋</button>
+<header>หาเซิร์ฟเกม</header>
+
+<div class="container">
+
+<!-- หน้าแรก -->
+<div id="page1" class="page">
+  <h2>เลือกเกม</h2>
+  <div class="grid">
+    <div class="card">
+      <img src="Minecraft_F.png">
+      <button onclick="chooseGame('Minecraft')">Minecraft</button>
+    </div>
+    <div class="card">
+      <img src="Roblox_F.png">
+      <button onclick="chooseGame('Roblox')">Roblox</button>
+    </div>
+  </div>
+</div>
+
+<!-- เลือกแนวเกม -->
+<div id="page2" class="page hidden">
+  <button class="back" onclick="goPage(1)">← ย้อนกลับ</button>
+  <h2 id="gameTitle"></h2>
+  <div class="grid" id="modeList"></div>
+</div>
+
+<!-- เลือกเซิฟ -->
+<div id="page3" class="page hidden">
+  <button class="back" onclick="goPage(2)">← ย้อนกลับ</button>
+  <h2>เลือกเซิร์ฟเวอร์</h2>
+  <div class="grid" id="serverList"></div>
+</div>
+
+<!-- รายละเอียดเซิฟ -->
+<div id="page4" class="page hidden">
+  <button class="back" onclick="goPage(3)">← ย้อนกลับ</button>
+  <h2 id="detailName"></h2>
+  <div class="preview" id="detailImg"></div>
+  <p id="detailDesc"></p>
+  <div id="detailExtra"></div>
+  <button class="delete-btn" id="deleteBtn">ลบเซิฟนี้</button>
+</div>
+
+<!-- เพิ่มเซิฟ -->
+<div id="addPage" class="page hidden">
+  <button class="back" onclick="goPage(1)">← ย้อนกลับ</button>
+  <h2>เพิ่มเซิร์ฟเวอร์</h2>
+  <select id="addGame" onchange="updateAddModes();toggleAdd()">
+    <option value="">-- เลือกเกม --</option>
+    <option>Minecraft</option>
+    <option>Roblox</option>
+  </select>
+  <input id="addName" placeholder="ชื่อเซิร์ฟ">
+  <textarea id="addDesc" placeholder="คำอธิบาย"></textarea>
+
+  <!-- แนวเกม -->
+  <div class="mode-box">
+    <b>แนวเกม</b>
+    <div id="addModeList"></div>
+  </div>
+
+  <!-- สำหรับ Minecraft -->
+  <div id="mcExtra" class="hidden">
+    <b>เวอร์ชันเกม</b>
+    <select id="mcVersion">
+      <option value="original">ของแท้เท่านั้น</option>
+      <option value="both">ทั้งแท้และเถื่อน</option>
+    </select>
+
+    <b>Edition / แพลตฟอร์ม</b>
+    <select id="mcEdition">
+      <option value="java">Java</option>
+      <option value="bedrock">Bedrock / แบคล๊อก</option>
+      <option value="both">ทั้งสอง</option>
+    </select>
+
+    <b>เวอร์ชันที่ใช้</b>
+    <input id="mcRealVersion" placeholder="เช่น 1.20.1">
+  </div>
+
+  <!-- รูปปก -->
+  <b>รูปปกเซิร์ฟ</b>
+  <div class="preview" id="imgPreview">ยังไม่ได้เลือกรูป</div>
+  <input type="file" accept="image/*" id="addImg">
+
+  <div id="mcFields" class="hidden">
+    <input id="pcIP" placeholder="PC IP">
+    <input id="phoneIP" placeholder="Phone IP">
+  </div>
+
+  <div id="rbxFields" class="hidden">
+    <input id="rbxLink" placeholder="ลิงก์ Roblox">
+  </div>
+
+  <button onclick="saveServer()">บันทึก</button>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+/* Firebase */
+const firebaseConfig = {
+  apiKey: "AIzaSyBcs3Owrnp3doAgLpT84ieIZZ-RL8XA8zs",
+  authDomain: "gamesevers-5421f.firebaseapp.com",
+  databaseURL: "https://gamesevers-5421f-default-rtdb.firebaseio.com",
+  projectId: "gamesevers-5421f"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* Background */
+const bg = document.getElementById("bg");
+function genBG(){
+  bg.innerHTML="";
+  const count=Math.floor(Math.random()*6)+4;
+  for(let i=0;i<count;i++){
+    const shape=document.createElement("div");
+    const size=Math.random()*160+60;
+    const color=`hsl(${Math.random()*360},70%,60%)`;
+    const type=["circle","square","triangle"][Math.floor(Math.random()*3)];
+    if(type==="triangle"){
+      shape.className="shape triangle";
+      shape.style.borderWidth=`${size/2}px ${size/2}px 0 ${size/2}px`;
+      shape.style.borderColor=`${color} transparent transparent transparent`;
+    }else{
+      shape.className=`shape ${type}`;
+      shape.style.width=size+"px";
+      shape.style.height=size+"px";
+      shape.style.background=color;
+    }
+    shape.style.left=Math.random()*innerWidth+"px";
+    shape.style.top=Math.random()*innerHeight+"px";
+    bg.appendChild(shape);
+  }
+}
+document.addEventListener("click",e=>{if(e.target.tagName==="BUTTON") genBG();});
+genBG();
+
+/* Data */
+const modesByGame={
+  Minecraft:["Survival","RPG","PVP","Skyblock","Minigame"],
+  Roblox:["Adventure","RPG","Simulator","Obby","PVP","Tower Defense"]
+};
+let servers=[];
+let currentGame="";
+let currentServerId="";
+let currentMode="";
+
+/* Elements */
+const gameTitle=document.getElementById("gameTitle");
+const modeList=document.getElementById("modeList");
+const serverList=document.getElementById("serverList");
+const detailName=document.getElementById("detailName");
+const detailDesc=document.getElementById("detailDesc");
+const detailExtra=document.getElementById("detailExtra");
+const detailImg=document.getElementById("detailImg");
+
+const addGame=document.getElementById("addGame");
+const addName=document.getElementById("addName");
+const addDesc=document.getElementById("addDesc");
+const addModeList=document.getElementById("addModeList");
+const mcFields=document.getElementById("mcFields");
+const rbxFields=document.getElementById("rbxFields");
+const pcIP=document.getElementById("pcIP");
+const phoneIP=document.getElementById("phoneIP");
+const rbxLink=document.getElementById("rbxLink");
+const addImg=document.getElementById("addImg");
+const imgPreview=document.getElementById("imgPreview");
+
+// Minecraft
+const mcExtra=document.getElementById("mcExtra");
+const mcVersion=document.getElementById("mcVersion");
+const mcEdition=document.getElementById("mcEdition");
+const mcRealVersion=document.getElementById("mcRealVersion");
+
+// Delete
+const deleteBtn = document.getElementById("deleteBtn");
+
+/* Navigation */
+function show(p){
+  document.querySelectorAll('.page').forEach(d=>{
+    if(d.id===p) d.classList.remove('hidden');
+    else d.classList.add('hidden');
+  });
+  window.scrollTo(0,0);
+}
+window.goPage=n=>show("page"+n);
+window.openAdd=()=>show("addPage");
+
+/* UI */
+window.chooseGame=g=>{
+  currentGame=g;
+  gameTitle.innerText=g+" : เลือกแนวเกม";
+  modeList.innerHTML="";
+  modesByGame[g].forEach(m=>{
+    modeList.innerHTML+=`<div class="card"><button onclick="chooseMode('${m}')">${m}</button></div>`;
+  });
+  show("page2");
+};
+
+window.chooseMode=m=>{
+  currentMode=m;
+  renderServers();
+  show("page3");
+};
+
+// Render servers dynamically
+function renderServers(){
+  serverList.innerHTML="";
+  servers.filter(s=>s.game===currentGame && s.modes.includes(currentMode))
+    .forEach(s=>{
+      const card = document.createElement("div");
+      card.className="card";
+      card.innerHTML=`
+        <img src="${s.img}">
+        <button onclick="openDetail('${s.id}')">${s.name}</button>
+        <button class="delete-btn">ลบ</button>
+      `;
+      // Delete button
+      card.querySelector(".delete-btn").onclick=()=>deleteServer(s.id);
+      serverList.appendChild(card);
+    });
+}
+
+/* Detail */
+window.openDetail=id=>{
+  const s=servers.find(x=>x.id===id);
+  if(!s) return;
+  currentServerId=id;
+  detailName.innerText=s.name;
+  detailDesc.innerText=s.desc;
+  detailImg.innerHTML = `<img src="${s.img}">`;
+  detailExtra.innerHTML=s.game==="Minecraft"
+    ? `<p>PC IP: ${s.pc}</p><p>Phone IP: ${s.phone}</p><p>เวอร์ชัน: ${s.version}</p><p>Edition/แพลตฟอร์ม: ${s.edition}</p><p>เวอร์ชันที่ใช้จริง: ${s.realVersion || "-"}</p>`
+    : `<a href="${s.link}" target="_blank"><button>เข้า Roblox</button></a>`;
+  show("page4");
+};
+
+// Delete in detail page
+deleteBtn.onclick = ()=>{
+  if(currentServerId && confirm("คุณต้องการลบเซิฟนี้ใช่หรือไม่?")){
+    remove(ref(db, "servers/"+currentServerId));
+    alert("ลบเรียบร้อย");
+    renderServers();
+    show("page1");
+  }
+};
+
+/* ADD SERVER */
+window.toggleAdd=()=>{
+  const isMC = addGame.value==="Minecraft";
+  mcFields.classList.toggle("hidden",!isMC);
+  rbxFields.classList.toggle("hidden",addGame.value!=="Roblox");
+  mcExtra.classList.toggle("hidden",!isMC);
+};
+
+window.updateAddModes=()=>{
+  addModeList.innerHTML="";
+  if(!addGame.value) return;
+  modesByGame[addGame.value].forEach(m=>{
+    addModeList.innerHTML+=`<label><input type="checkbox" value="${m}"> ${m}</label>`;
+  });
+};
+
+addImg.onchange=()=>{
+  const f=addImg.files[0];
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    imgPreview.innerHTML=`<img src="${e.target.result}">`;
+    imgPreview.dataset.img=e.target.result;
+  };
+  r.readAsDataURL(f);
+};
+
+window.saveServer=()=>{
+  const modes=[...addModeList.querySelectorAll("input:checked")].map(c=>c.value);
+  if(!addGame.value||!addName.value||!addDesc.value||!modes.length||!imgPreview.dataset.img)
+    return alert("กรอกข้อมูลให้ครบ");
+
+  push(ref(db,"servers"),{
+    game:addGame.value,
+    name:addName.value,
+    desc:addDesc.value,
+    modes,
+    pc:pcIP.value,
+    phone:phoneIP.value,
+    link:rbxLink.value,
+    img:imgPreview.dataset.img,
+    version: addGame.value==="Minecraft" ? mcVersion.value : null,
+    edition: addGame.value==="Minecraft" ? mcEdition.value : null,
+    realVersion: addGame.value==="Minecraft" ? mcRealVersion.value : null
+  });
+
+  alert("บันทึกเรียบร้อย");
+  show("page1");
+};
+
+// Delete function
+function deleteServer(id){
+  if(confirm("คุณต้องการลบเซิฟนี้ใช่หรือไม่?")){
+    remove(ref(db,"servers/"+id));
+    alert("ลบเรียบร้อย");
+    renderServers();
+  }
+}
+
+// Firebase real-time listener
+onValue(ref(db,"servers"), snap=>{
+  servers=[];
+  snap.forEach(c=>servers.push({ id:c.key, ...c.val() }));
+  if(currentGame && currentMode) renderServers();
+});
+
+</script>
+</body>
+</html>
